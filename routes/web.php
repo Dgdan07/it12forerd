@@ -32,6 +32,13 @@ Route::middleware(['auth.simple'])->group(function () {
         Route::post('/users/{user}/archive', [UserController::class, 'archive'])->name('users.archive');
         Route::post('/users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
         Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::resource('suppliers', SupplierController::class);
+        Route::post('/suppliers/{supplier}/archive', [SupplierController::class, 'archive'])->name('suppliers.archive');
+        Route::post('/suppliers/{supplier}/restore', [SupplierController::class, 'restore'])->name('suppliers.restore');
+        Route::resource('products', ProductController::class);
+        Route::post('/products/{product}/archive', [ProductController::class, 'archive'])->name('products.archive');
+        Route::post('/products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
+        Route::post('/suppliers/quick-store', [SupplierController::class, 'quickStore'])->name('suppliers.quick-store');
     });
 
     // Both admin and employee can access these

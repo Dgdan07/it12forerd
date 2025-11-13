@@ -32,3 +32,16 @@ html, body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+.text-wrap-break {
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 200px; 
+}
+.modal-description {
+    max-height: 100px;
+    overflow-y: auto;
+    word-wrap: break-word;
+    word-break: break-word;
+}

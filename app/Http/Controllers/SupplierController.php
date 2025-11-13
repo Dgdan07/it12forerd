@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
@@ -10,19 +12,30 @@ class SupplierController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        return view('suppliers.index');
+        $showArchived = $request->has('archived');
+        
+        $query = Supplier::with(['disabledBy']);
 
-    }
+        if ($showArchived) {
+            $query->archived();
+        } else {
+            $query->active();
+        }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('supplier_name', 'like', '%' . $search . '%')
+                  ->orWhere('contact_info', 'like', '%' . $search . '%')
+                  ->orWhere('address', 'like', '%' . $search . '%');
+            });
+        }
+
+        $suppliers = $query->orderBy('id', 'asc')->paginate(10);
+
+        return view('suppliers.index', compact('suppliers', 'showArchived'));
     }
 
     /**
@@ -30,7 +43,25 @@ class SupplierController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        try {
+            $request->validate([
+                'supplier_name' => 'required|string|max:150|unique:suppliers,supplier_name',
+                'contact_info' => 'nullable|string|max:50',
+                'address' => 'nullable|string|max:255',
+            ]);
+
+            Supplier::create([
+                'supplier_name' => $request->supplier_name,
+                'contact_info' => $request->contact_info,
+                'address' => $request->address,
+                'is_active' => true,
+            ]);
+
+            return redirect()->route('suppliers.index')->with('success', 'Supplier added successfully.');
+            
+        } catch (Exception $e) {
+            return redirect()->route('suppliers.index')->with('error', 'Error: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -38,7 +69,8 @@ class SupplierController extends Controller
      */
     public function show(Supplier $supplier)
     {
-        //
+        $supplier->load(['disabledBy']);
+        return response()->json($supplier);
     }
 
     /**
@@ -46,7 +78,7 @@ class SupplierController extends Controller
      */
     public function edit(Supplier $supplier)
     {
-        //
+        return response()->json($supplier);
     }
 
     /**
@@ -54,14 +86,103 @@ class SupplierController extends Controller
      */
     public function update(Request $request, Supplier $supplier)
     {
-        //
+        try {
+            $request->validate([
+                'supplier_name' => 'required|string|max:150|unique:suppliers,supplier_name,' . $supplier->id,
+                'contact_info' => 'nullable|string|max:50',
+                'address' => 'nullable|string|max:255',
+            ]);
+
+            $supplier->update([
+                'supplier_name' => $request->supplier_name,
+                'contact_info' => $request->contact_info,
+                'address' => $request->address,
+            ]);
+
+            return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully.');
+            
+        } catch (Exception $e) {
+            return redirect()->route('suppliers.index')->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function archive(Supplier $supplier)
+    {
+        try {
+            // Check if supplier can be archived (only prevent if active purchase orders exist)
+            if (!$supplier->canBeArchived()) {
+                $errorMessage = 'Cannot archive supplier. ';
+                $errorMessage .= 'Supplier has active purchase orders. Please complete or cancel the purchase orders first.';
+                
+                return redirect()->route('suppliers.index')->with('error', $errorMessage);
+            }
+
+            $currentUserId = session('user_id');
+
+            $supplier->update([
+                'is_active' => false,
+                'date_disabled' => now(),
+                'disabled_by_user_id' => $currentUserId,
+            ]);
+
+            return redirect()->route('suppliers.index')->with('success', 'Supplier archived successfully.');
+            
+        } catch (Exception $e) {
+            return redirect()->route('suppliers.index')->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function restore(Supplier $supplier)
+    {
+        try {
+            $supplier->update([
+                'is_active' => true,
+                'date_disabled' => null,
+                'disabled_by_user_id' => null,
+            ]);
+
+            return redirect()->route('suppliers.index', ['archived' => true])->with('success', 'Supplier restored successfully.');
+            
+        } catch (Exception $e) {
+            return redirect()->route('suppliers.index', ['archived' => true])->with('error', 'Error: ' . $e->getMessage());
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Supplier $supplier)
+    public function destroy(string $id)
     {
         //
+    }
+
+    public function quickStore(Request $request)
+    {
+        try {
+            $request->validate([
+                'supplier_name' => 'required|string|max:150|unique:suppliers,supplier_name',
+                'contact_info' => 'nullable|string|max:50',
+                'address' => 'nullable|string|max:255',
+            ]);
+
+            $supplier = Supplier::create([
+                'supplier_name' => $request->supplier_name,
+                'contact_info' => $request->contact_info,
+                'address' => $request->address,
+                'is_active' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'supplier' => $supplier,
+                'message' => 'Supplier added successfully.'
+            ]);
+            
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

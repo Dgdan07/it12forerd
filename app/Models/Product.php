@@ -2,9 +2,112 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    //
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'description',
+        'category_id',
+        'image_path',
+        'manufacturer_barcode',
+        'price',
+        'quantity_in_stock',
+        'reorder_level',
+        'last_unit_cost',
+        'is_active',
+        'date_disabled',
+        'disabled_by_user_id',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'last_unit_cost' => 'decimal:2',
+        'quantity_in_stock' => 'integer',
+        'reorder_level' => 'integer',
+        'is_active' => 'boolean',
+        'date_disabled' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    protected $appends = ['image_url']; // Add this line
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function disabledBy()
+    {
+        return $this->belongsTo(User::class, 'disabled_by_user_id')->withDefault([
+            'full_name' => 'System'
+        ]);
+    }
+
+    // Many-to-many relationship with suppliers
+    public function suppliers()
+    {
+        return $this->belongsToMany(Supplier::class, 'product_suppliers')
+                    ->withPivot('default_unit_cost')
+                    ->withTimestamps();
+    }
+
+    // Relationship with sale items
+    public function saleItems()
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    // Check if product has sales history
+    public function hasSales()
+    {
+        return $this->saleItems()->exists();
+    }
+
+    // Check if product can be archived
+    public function canBeArchived()
+    {
+        return true;
+    }
+
+    // Get image URL
+    public function getImageUrlAttribute()
+    {
+        if ($this->image_path) {
+            return asset('storage/' . $this->image_path);
+        }
+        return asset('images/no-image.jpg'); // Default no image
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('is_active', false);
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereRaw('quantity_in_stock <= reorder_level');
+    }
+
+    // Search scope
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhere('manufacturer_barcode', 'like', '%' . $search . '%')
+                    ->orWhereHas('category', function($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%');
+                    });
+    }
 }

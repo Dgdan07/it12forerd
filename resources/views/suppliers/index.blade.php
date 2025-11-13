@@ -6,15 +6,454 @@
 @section('content')
     @include('components.alerts')
     
+    <!-- Page Header -->
     <div class="page-header">
         <h2 class="mb-0">
-            <b>Supplier Management</b>
+            <b>Suppliers Management</b>
         </h2>
     </div>
 
-    <!-- Table -->
+    <!-- Suppliers Table -->
     <div class="table-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
+            <!-- Search Bar -->
+            <form action="{{ route('suppliers.index') }}" method="GET" class="d-flex flex-grow-1 me-3" style="max-width: 400px;">
+                <input type="hidden" name="archived" value="{{ $showArchived ? 'true' : '' }}">
+                <div class="input-group search-box w-100">
+                    <input type="text" class="form-control" name="search" placeholder="Search suppliers..." value="{{ request('search') }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+    
+            <!-- Action Buttons (Archive / Add) -->
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                @if($showArchived)
+                    <a href="{{ route('suppliers.index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Back to Active Suppliers
+                    </a>
+                @else
+                    <a href="{{ route('suppliers.index', ['archived' => true]) }}" class="btn btn-outline-warning">
+                        <i class="bi bi-archive me-1"></i>
+                        Archive
+                    </a>
+                @endif
+    
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Add New Supplier
+                </button>
+            </div>
+        </div>
         
+        <div class="table-responsive">
+            <!-- Results Count -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted">
+                    @if(request('search'))
+                        Displaying {{ $suppliers->count() }} of {{ $suppliers->total() }} results for "{{ request('search') }}"
+                    @else
+                        Displaying {{ $suppliers->count() }} of {{ $suppliers->total() }} {{ $showArchived ? 'archived' : 'active' }} suppliers
+                    @endif
+                </div>
+            </div>
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Supplier Name</th>
+                        <th>Contact Info</th>
+                        <th>Address</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($suppliers as $supplier)
+                    <tr>
+                        <td>{{ $supplier->id }}</td>
+                        <td>
+                            <strong>{{ $supplier->supplier_name }}</strong>
+                        </td>
+                        <td>{{ $supplier->contact_info ?? 'N/A' }}</td>
+                        <td>{{ $supplier->address ?? 'N/A' }}</td>
+                        <td>{{ $supplier->updated_at->format('Y-m-d') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info btn-action view-supplier" data-id="{{ $supplier->id }}" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            @if($supplier->is_active)
+                                <button class="btn btn-sm btn-outline-warning btn-action edit-supplier" data-id="{{ $supplier->id }}" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger btn-action archive-supplier" 
+                                        data-id="{{ $supplier->id }}" 
+                                        data-name="{{ $supplier->supplier_name }}"
+                                        data-has-active-orders="{{ $supplier->hasActivePurchaseOrders() ? 'true' : 'false' }}"
+                                        data-active-orders-count="{{ $supplier->active_purchase_orders_count }}"
+                                        title="Archive">
+                                    <i class="bi bi-archive"></i>
+                                </button>
+                            @else
+                                <button class="btn btn-sm btn-outline-success btn-action restore-supplier" data-id="{{ $supplier->id }}" data-name="{{ $supplier->supplier_name }}" title="Restore">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            @endif
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            No {{ $showArchived ? 'archived' : 'active' }} suppliers found
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center mt-3">
+            {{ $suppliers->appends(request()->query())->links('pagination::bootstrap-4') }}
+        </div>
     </div>
 
+    <!-- Add Supplier Modal -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ route('suppliers.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addSupplierModalLabel">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Add New Supplier
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="supplier_name" class="form-label">Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="supplier_name" name="supplier_name" placeholder="Enter supplier name" maxlength="150" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contact_info" class="form-label">Contact Number</label>
+                            <input type="number" pattern="[0-9]*" inputmode="numeric" class="form-control" id="contact_info" name="contact_info" placeholder="Enter contact number" maxlength="11">
+                        </div>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" placeholder="Enter address" maxlength="255" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Supplier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Supplier Modal -->
+    <div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="editSupplierForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editSupplierModalLabel">
+                            <i class="bi bi-pencil me-2"></i>
+                            Edit Supplier
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editSupplierName" class="form-label">Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editSupplierName" name="supplier_name" maxlength="150" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editContactInfo" class="form-label">Contact Number</label>
+                            <input type="number" pattern="[0-9]*" inputmode="numeric" class="form-control" id="editContactInfo" name="contact_info" maxlength="11">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAddress" class="form-label">Address</label>
+                            <textarea class="form-control" id="editAddress" name="address" maxlength="255" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Supplier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Supplier Modal -->
+    <div class="modal fade" id="viewSupplierModal" tabindex="-1" aria-labelledby="viewSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewSupplierModalLabel">
+                        <i class="bi bi-building me-2"></i>
+                        Supplier Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Supplier Name:</small>
+                            <span class="fw-semibold" id="viewSupplierName"></span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Contact Info:</small>
+                            <span class="fw-semibold" id="viewContactInfo">N/A</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Address:</small>
+                            <span class="fw-semibold" id="viewAddress">N/A</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Status:</small>
+                            <span class="fw-semibold" id="viewStatusText"></span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Created:</small>
+                            <span class="fw-semibold" id="viewCreatedAt"></span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between px-0">
+                            <small class="text-muted">Updated:</small>
+                            <span class="fw-semibold" id="viewUpdatedAt"></span>
+                        </div>
+                    </div>
+
+                    <!-- Archive Info -->
+                    <div class="mt-3 p-2 bg-warning bg-opacity-10 rounded" id="archiveInfo" style="display: none;">
+                        <small class="text-muted d-block">Archive Information</small>
+                        <div class="d-flex justify-content-between">
+                            <small>Date:</small>
+                            <small class="fw-semibold" id="viewDateDisabled"></small>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small>By:</small>
+                            <small class="fw-semibold" id="viewDisabledBy"></small>
+                        </div>
+                    </div>               
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- In the archive confirmation modal -->
+    <div class="modal fade" id="archiveSupplierModal" tabindex="-1" aria-labelledby="archiveSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="archiveSupplierForm" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="archiveSupplierModalLabel">
+                            <i class="bi bi-exclamation-triangle me-2 text-warning"></i>
+                            Confirm Archive
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <i class="bi bi-archive text-warning" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">Are you sure you want to archive this supplier?</h5>
+                            <p class="text-muted">Supplier: <strong id="archiveSupplierName"></strong></p>
+                            
+                            <!-- Warning about active purchase orders -->
+                            <div class="alert alert-danger mt-3" id="archiveWarning" style="display: none;">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> This supplier cannot be archived because it has 
+                                <strong id="activeOrdersCount">0</strong> active purchase orders.
+                                <br><small>Please complete or cancel the purchase orders first.</small>
+                            </div>
+                            
+                            <!-- Info about products -->
+                            <div class="alert alert-info mt-3" id="productsInfo" style="display: none;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Note:</strong> This supplier is associated with products. 
+                                Archiving will not affect product availability as products can have multiple suppliers.
+                            </div>
+                            
+                            <div class="alert alert-warning mt-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> Archived suppliers will be hidden from active lists but their data is preserved.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning" id="archiveSubmitBtn">Archive Supplier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore Confirmation Modal -->
+    <div class="modal fade" id="restoreSupplierModal" tabindex="-1" aria-labelledby="restoreSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="restoreSupplierForm" method="POST">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="restoreSupplierModalLabel">
+                            <i class="bi bi-arrow-clockwise me-2 text-success"></i>
+                            Confirm Restore
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <i class="bi bi-arrow-clockwise text-success" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">Are you sure you want to restore this supplier?</h5>
+                            <p class="text-muted">Supplier: <strong id="restoreSupplierName"></strong></p>
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                The supplier will be visible in active lists again.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Restore Supplier</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script>
+        // Edit Supplier
+        document.querySelectorAll('.edit-supplier').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                
+                fetch(`/suppliers/${supplierId}/edit`)
+                    .then(response => response.json())
+                    .then(supplier => {
+                        document.getElementById('editSupplierName').value = supplier.supplier_name;
+                        document.getElementById('editContactInfo').value = supplier.contact_info || '';
+                        document.getElementById('editAddress').value = supplier.address || '';
+                        
+                        document.getElementById('editSupplierForm').action = `/suppliers/${supplierId}`;
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('editSupplierModal'));
+                        modal.show();
+                    });
+            });
+        });
+        
+        // View Supplier
+        document.querySelectorAll('.view-supplier').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                
+                fetch(`/suppliers/${supplierId}`)
+                    .then(response => response.json())
+                    .then(supplier => {                
+                        document.getElementById('viewSupplierName').textContent = supplier.supplier_name;
+                        document.getElementById('viewContactInfo').textContent = supplier.contact_info || 'N/A';
+                        document.getElementById('viewAddress').textContent = supplier.address || 'N/A';
+                        document.getElementById('viewCreatedAt').textContent = new Date(supplier.created_at).toLocaleString();
+                        document.getElementById('viewUpdatedAt').textContent = new Date(supplier.updated_at).toLocaleString();
+                        
+                        const statusText = document.getElementById('viewStatusText');
+                        if (supplier.is_active) {
+                            statusText.textContent = 'Active';
+                            statusText.className = 'fw-semibold'; 
+                            document.getElementById('archiveInfo').style.display = 'none';
+                        } else {
+                            statusText.textContent = 'Archived';
+                            statusText.className = 'fw-semibold';
+                            document.getElementById('archiveInfo').style.display = 'block';
+                            
+                            // Date disabled
+                            if (supplier.date_disabled) {
+                                document.getElementById('viewDateDisabled').textContent = 
+                                    new Date(supplier.date_disabled).toLocaleString();
+                            } else {
+                                document.getElementById('viewDateDisabled').textContent = 'N/A';
+                            }
+                            
+                            // Disabled by
+                            if (supplier.disabled_by && supplier.disabled_by.full_name) {
+                                document.getElementById('viewDisabledBy').textContent = supplier.disabled_by.full_name;
+                            } else if (supplier.disabled_by_user_id) {
+                                document.getElementById('viewDisabledBy').textContent = 'User #' + supplier.disabled_by_user_id;
+                            } else {
+                                document.getElementById('viewDisabledBy').textContent = 'System';
+                            }
+                        }
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('viewSupplierModal'));
+                        modal.show();
+                    })
+                    .catch(error => {
+                        console.error('Error fetching supplier:', error);
+                    });
+            });
+        });
+        
+        // Archive Supplier
+        document.querySelectorAll('.archive-supplier').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                const supplierName = this.getAttribute('data-name');
+                const hasActiveOrders = this.getAttribute('data-has-active-orders') === 'true';
+                const activeOrdersCount = this.getAttribute('data-active-orders-count');
+                
+                document.getElementById('archiveSupplierName').textContent = supplierName;
+                document.getElementById('archiveSupplierForm').action = `/suppliers/${supplierId}/archive`;
+                
+                const productsInfoDiv = document.getElementById('productsInfo');
+                const submitBtn = document.getElementById('archiveSubmitBtn');
+                const activeOrdersCountSpan = document.getElementById('activeOrdersCount');
+                
+                if (hasActiveOrders) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Cannot Archive';
+                    activeOrdersCountSpan.textContent = activeOrdersCount;
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Archive Supplier';
+                }
+                
+                // Always show products info if supplier has products
+                // You might want to add a data attribute for hasProducts if needed
+                productsInfoDiv.style.display = 'block';
+                
+                const modal = new bootstrap.Modal(document.getElementById('archiveSupplierModal'));
+                modal.show();
+            });
+        });
+        
+        // Restore Supplier
+        document.querySelectorAll('.restore-supplier').forEach(button => {
+            button.addEventListener('click', function() {
+                const supplierId = this.getAttribute('data-id');
+                const supplierName = this.getAttribute('data-name');
+                
+                document.getElementById('restoreSupplierName').textContent = supplierName;
+                document.getElementById('restoreSupplierForm').action = `/suppliers/${supplierId}/restore`;
+                
+                const modal = new bootstrap.Modal(document.getElementById('restoreSupplierModal'));
+                modal.show();
+            });
+        });
+    </script>
+    @endpush
 @endsection

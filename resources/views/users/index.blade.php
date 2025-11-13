@@ -86,6 +86,12 @@
                         <td class="primary">{{ $user->role->name }}</td>
                         <td>{{ $user->updated_at->format('Y-m-d') }}</td>
                         <td>
+                            <button class="btn btn-sm btn-outline-secondary btn-action reset-password" 
+                                    data-id="{{ $user->id }}" 
+                                    data-name="{{ $user->full_name }}"
+                                    title="Reset Password">
+                                <i class="bi bi-key"></i>
+                            </button>
                             <button class="btn btn-sm btn-outline-info btn-action view-user" data-id="{{ $user->id }}" title="View Details">
                                 <i class="bi bi-eye"></i>
                             </button>
@@ -160,7 +166,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="contactNo" class="form-label">Contact Number</label>
-                                    <input type="text" class="form-control" id="contactNo" name="contactNo" placeholder="Enter contact number" maxlength="50">
+                                    <input type="number" pattern="[0-9]*" inputmode="numeric" class="form-control" id="contactNo" name="contactNo" placeholder="Enter contact number" maxlength="50">
                                 </div>
                                 <div class="mb-3">
                                     <label for="role_id" class="form-label">Role <span class="text-danger">*</span></label>
@@ -232,7 +238,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="editContactNo" class="form-label">Contact Number</label>
-                                    <input type="text" class="form-control" id="editContactNo" name="contactNo" maxlength="50">
+                                    <input type="number" pattern="[0-9]*" inputmode="numeric" class="form-control" id="editContactNo" name="contactNo" maxlength="50">
                                 </div>
                                 <div class="mb-3">
                                     <label for="editRoleId" class="form-label">Role <span class="text-danger">*</span></label>
@@ -242,15 +248,6 @@
                                             <option value="{{ $role->id }}">{{ $role->name }}</option>
                                         @endforeach
                                     </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editPassword" class="form-label">New Password</label>
-                                    <input type="password" class="form-control" id="editPassword" name="password" placeholder="Leave blank to keep current password">
-                                    <div class="form-text">Minimum 8 characters</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="editPasswordConfirmation" class="form-label">Confirm New Password</label>
-                                    <input type="password" class="form-control" id="editPasswordConfirmation" name="password_confirmation">
                                 </div>
                             </div>
                         </div>
@@ -326,10 +323,6 @@
                 </div>               
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-warning btn-sm" id="resetPasswordBtn">
-                    <i class="bi bi-key me-1"></i>
-                    Reset Password
-                </button>
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -447,7 +440,6 @@
 
     @push('scripts')
     <script>
-        // Global variable to store current user ID
         let currentViewUserId = null;
     
         // Edit User
@@ -556,35 +548,23 @@
             });
         });
     
-        // Reset Password Button - Check if element exists first
-        const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-        if (resetPasswordBtn) {
-            resetPasswordBtn.addEventListener('click', function() {
-                if (!currentViewUserId) {
-                    alert('No user selected');
-                    return;
-                }
+        // Reset Password
+        document.querySelectorAll('.reset-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                const userName = this.getAttribute('data-name');
                 
-                // Get user name from the view modal for display
-                const userName = document.getElementById('viewFullName').textContent;
                 document.getElementById('resetPasswordUserName').textContent = userName;
+                document.getElementById('resetPasswordForm').action = `/users/${userId}/reset-password`;
                 
-                // Set the form action
-                document.getElementById('resetPasswordForm').action = `/users/${currentViewUserId}/reset-password`;
-                
-                // Clear previous inputs
                 document.getElementById('newPassword').value = '';
                 document.getElementById('newPasswordConfirmation').value = '';
-                
-                // Show reset password modal
-                const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewUserModal'));
-                viewModal.hide();
                 
                 const resetModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
                 resetModal.show();
             });
-        }
-    
+        });
+            
         // Handle reset password form submission - Check if element exists first
         const resetPasswordForm = document.getElementById('resetPasswordForm');
         if (resetPasswordForm) {
