@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('name', 50)->unique();
             $table->string('description', 255)->nullable();
 
+            $table->string('sku_prefix', 10)->unique();
+
             $table->timestamps();
         });
     }

@@ -190,6 +190,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
+                        <th>SKU</th>
                         <th>Image</th>
                         <th>Product Name</th>
                         <th>Category</th>
@@ -204,6 +205,7 @@
                     @forelse($products as $product)
                     <tr class="{{ $product->quantity_in_stock == 0 ? 'out-of-stock' : ($product->quantity_in_stock <= $product->reorder_level ? 'low-stock' : '') }}">
                         <td>{{ $product->id }}</td>
+                        <td><code>{{ $product->sku }}</code></td>
                         <td>
                             <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="product-image">
                         </td>
@@ -273,126 +275,133 @@
     </div>
 
     <!-- View Product Modal -->
-    <!-- View Product Modal -->
-<div class="modal fade" id="viewProductModal" tabindex="-1" aria-labelledby="viewProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewProductModalLabel">
-                    <i class="bi bi-box me-2"></i>
-                    Product Details
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-4 text-center">
-                        <img id="viewProductImage" src="" alt="Product Image" class="img-fluid rounded mb-3" style="max-height: 200px;">
+    <div class="modal fade" id="viewProductModal" tabindex="-1" aria-labelledby="viewProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewProductModalLabel">
+                        <i class="bi bi-box me-2"></i>
+                        Product Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <img id="viewProductImage" src="" alt="Product Image" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                        </div>
+                        <div class="col-md-8">
+                            <!-- Compact grid layout -->
+                            <div class="row g-2">
+                                <div class="col-5">
+                                    <small class="text-muted">Product Name:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold text-break" id="viewProductName"></span>
+                                </div>
+
+                                <div class="col-5">
+                                    <small class="text-muted">SKU:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold text-break" id="viewProductSku"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Description:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold text-break" id="viewProductDescription">N/A</span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Category:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductCategory"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Barcode:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductBarcode">N/A</span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Price:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductPrice"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Stock:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductStock"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Reorder Level:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductReorder"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Last Unit Cost:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewProductCost"></span>
+                                </div>
+                                
+                                <div class="col-5">
+                                    <small class="text-muted">Primary Supplier:</small>
+                                </div>
+                                <div class="col-7">
+                                    <span class="fw-semibold" id="viewPrimarySupplier">N/A</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-8">
-                        <!-- Compact grid layout -->
+
+                    <!-- Suppliers Section -->
+                    <div class="mt-4">
+                        <h6 class="border-bottom pb-2">
+                            <i class="bi bi-truck me-2"></i>
+                            Suppliers (<span id="viewSuppliersCount">0</span>)
+                        </h6>
+                        <div id="viewSuppliersList" class="mt-2">
+                            <!-- Suppliers will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Archive Info -->
+                    <div class="mt-3 p-2 bg-warning bg-opacity-10 rounded" id="archiveInfo" style="display: none;">
+                        <small class="text-muted d-block">Archive Information</small>
                         <div class="row g-2">
-                            <div class="col-5">
-                                <small class="text-muted">Product Name:</small>
+                            <div class="col-3">
+                                <small>Date:</small>
                             </div>
-                            <div class="col-7">
-                                <span class="fw-semibold text-break" id="viewProductName"></span>
+                            <div class="col-9">
+                                <small class="fw-semibold" id="viewDateDisabled"></small>
                             </div>
-                            <div class="col-5">
-                                <small class="text-muted">Description:</small>
+                            <div class="col-3">
+                                <small>By:</small>
                             </div>
-                            <div class="col-7">
-                                <span class="fw-semibold text-break" id="viewProductDescription">N/A</span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Category:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductCategory"></span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Barcode:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductBarcode">N/A</span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Price:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductPrice"></span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Stock:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductStock"></span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Reorder Level:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductReorder"></span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Last Unit Cost:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewProductCost"></span>
-                            </div>
-                            
-                            <div class="col-5">
-                                <small class="text-muted">Primary Supplier:</small>
-                            </div>
-                            <div class="col-7">
-                                <span class="fw-semibold" id="viewPrimarySupplier">N/A</span>
+                            <div class="col-9">
+                                <small class="fw-semibold" id="viewDisabledBy"></small>
                             </div>
                         </div>
-                    </div>
+                    </div>               
                 </div>
-
-                <!-- Suppliers Section -->
-                <div class="mt-4">
-                    <h6 class="border-bottom pb-2">
-                        <i class="bi bi-truck me-2"></i>
-                        Suppliers (<span id="viewSuppliersCount">0</span>)
-                    </h6>
-                    <div id="viewSuppliersList" class="mt-2">
-                        <!-- Suppliers will be populated here -->
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
-
-                <!-- Archive Info -->
-                <div class="mt-3 p-2 bg-warning bg-opacity-10 rounded" id="archiveInfo" style="display: none;">
-                    <small class="text-muted d-block">Archive Information</small>
-                    <div class="row g-2">
-                        <div class="col-3">
-                            <small>Date:</small>
-                        </div>
-                        <div class="col-9">
-                            <small class="fw-semibold" id="viewDateDisabled"></small>
-                        </div>
-                        <div class="col-3">
-                            <small>By:</small>
-                        </div>
-                        <div class="col-9">
-                            <small class="fw-semibold" id="viewDisabledBy"></small>
-                        </div>
-                    </div>
-                </div>               
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Archive Confirmation Modal -->
     <div class="modal fade" id="archiveProductModal" tabindex="-1" aria-labelledby="archiveProductModalLabel" aria-hidden="true">
@@ -472,6 +481,7 @@
                     .then(response => response.json())
                     .then(product => {                           
                         document.getElementById('viewProductName').textContent = product.name;
+                        document.getElementById('viewProductSku').textContent = product.sku;
                         document.getElementById('viewProductDescription').textContent = product.description || 'N/A';
                         document.getElementById('viewProductCategory').textContent = product.category.name;
                         document.getElementById('viewProductBarcode').textContent = product.manufacturer_barcode || 'N/A';

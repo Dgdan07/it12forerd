@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\POSController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StockInController;
@@ -42,6 +43,7 @@ Route::middleware(['auth.simple'])->group(function () {
         Route::resource('products', ProductController::class);
         Route::post('/products/{product}/archive', [ProductController::class, 'archive'])->name('products.archive');
         Route::post('/products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
+        Route::get('/products/suggest-sku/{categoryId}', [ProductController::class, 'suggestSku']);
         Route::post('/suppliers/quick-store', [SupplierController::class, 'quickStore'])->name('suppliers.quick-store');
         Route::post('/suppliers/quick-add', [SupplierController::class, 'quickAdd'])
     ->name('suppliers.quick-add');
@@ -60,4 +62,17 @@ Route::middleware(['auth.simple'])->group(function () {
 
     // Both admin and employee can access these
     Route::resource('categories', CategoryController::class);
+    Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
+
+    Route::prefix('pos')->group(function () {
+        Route::post('/initialize-sale', [POSController::class, 'initializeSale']);
+        Route::post('/search-product', [POSController::class, 'searchProduct']);
+        Route::post('/add-item', [POSController::class, 'addItem']);
+        Route::put('/update-item/{itemId}', [POSController::class, 'updateItem']);
+        Route::delete('/remove-item/{itemId}', [POSController::class, 'removeItem']);
+        Route::get('/sale-items/{saleId}', [POSController::class, 'getSaleItems']);
+        Route::post('/process-payment', [POSController::class, 'processPayment']);
+    });
+
+    
 });

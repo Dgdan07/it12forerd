@@ -78,6 +78,7 @@ class ProductController extends Controller
     {
         try {
             $request->validate([
+                'sku_suffix' => 'required|integer|min:1|max:99999|digits_between:1,5', 
                 'name' => 'required|string|max:150',
                 'description' => 'nullable|string|max:500',
                 'category_id' => 'required|exists:categories,id',
@@ -90,6 +91,14 @@ class ProductController extends Controller
                 'suppliers' => 'nullable|array',
                 'suppliers.*.id' => 'nullable|exists:suppliers,id', 
                 'suppliers.*.default_unit_cost' => 'nullable|numeric|min:0', 
+            ]);
+            
+            $sku = Product::generateSku($request->category_id, $request->sku_suffix);
+
+            $request->validate([
+                'sku_suffix' => 'unique:products,sku',
+            ], [
+                'sku_suffix.unique' => 'This SKU suffix is already taken for the selected category. Please choose a different number.'
             ]);
 
             // Handle image upload
@@ -111,6 +120,7 @@ class ProductController extends Controller
 
             // Create the product with mandatory supplier fields
             $product = Product::create([
+                'sku' => $sku,
                 'name' => ucfirst($request->name),
                 'description' => $request->description,
                 'category_id' => $request->category_id,
@@ -282,6 +292,32 @@ class ProductController extends Controller
             
         } catch (Exception $e) {
             return redirect()->route('products.index', ['archived' => true])->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function suggestSku($categoryId)
+    {
+        try {
+            $suggestedSuffix = 1;
+            
+            $latestProduct = Product::where('sku', 'like', Category::find($categoryId)->sku_prefix . '-%')
+                ->orderBy('sku', 'desc')
+                ->first();
+
+            if ($latestProduct) {
+                $prefix = Category::find($categoryId)->sku_prefix;
+                $lastSuffix = intval(substr($latestProduct->sku, strlen($prefix) + 1));
+                $suggestedSuffix = $lastSuffix + 1;
+            }
+
+            return response()->json([
+                'suggested_suffix' => $suggestedSuffix
+            ]);
+            
+        } catch (Exception $e) {
+            return response()->json([
+                'suggested_suffix' => 1
+            ]);
         }
     }
 

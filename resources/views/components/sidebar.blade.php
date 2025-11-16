@@ -27,7 +27,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a href="#" class="nav-link {{ request()->is('POS') ? 'active' : '' }}">
+                <a href="{{ route('pos.index') }}" class="nav-link {{ request()->is('POS') ? 'active' : '' }}">
                     <i class="bi bi-cash-stack me-3"></i>
                     <span>POS</span>
                 </a>

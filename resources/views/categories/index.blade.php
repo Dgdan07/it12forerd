@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Roles - ATIN Admin')
+@section('title', 'Categories - ATIN Admin')
 @push('styles')
 <link href="{{ asset('css/page-style.css') }}" rel="stylesheet">
 @endpush
@@ -63,6 +63,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Category Name</th>
+                        <th>SKU Prefix</th>
                         <th>Description</th>
                         <th>Created Date</th>
                         <th>Actions</th>
@@ -73,6 +74,7 @@
                     <tr>
                         <td>{{ $category->id }}</td>
                         <td>{{ $category->name }}</td>
+                        <td><code>{{ $category->sku_prefix }}</code></td> 
                         <td class="description-cell" title="{{ $category->description }}">{{ $category->description ?? 'No description' }}</td>
                         <td>{{ $category->created_at->format('Y-m-d') }}</td>
                         <td>
@@ -124,6 +126,15 @@
                             <div class="form-text">Maximum 50 characters</div>
                         </div>
                         <div class="mb-3">
+                            <label for="categorySkuPrefix" class="form-label">SKU Prefix <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="categorySkuPrefix" name="sku_prefix" placeholder="e.g., CAT, SHOE, ELEC" maxlength="10" required>
+                            <div class="form-text">Unique prefix for product SKUs (max 10 characters, will be converted to uppercase)</div>
+                            <div class="form-text text-warning">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Important:</strong> SKU prefix cannot be changed after creation. Choose carefully as it will be used for all product SKUs in this category.
+                            </div>
+                        </div>
+                        <div class="mb-3">
                             <label for="categoryDescription" class="form-label">Description</label>
                             <textarea class="form-control" id="categoryDescription" name="description" rows="3" placeholder="Enter category description" maxlength="255"></textarea>
                             <div class="form-text">Maximum 255 characters</div>
@@ -158,6 +169,10 @@
                         <div class="list-group-item">
                             <small class="text-muted d-block">Category Name</small>
                             <span class="fw-semibold" id="viewCategoryName"></span>
+                        </div>
+                        <div class="list-group-item">
+                            <small class="text-muted d-block">SKU Prefix</small>
+                            <span class="fw-semibold"><code id="viewCategorySkuPrefix"></code></span>
                         </div>
                         <div class="list-group-item">
                             <small class="text-muted d-block">Description</small>
@@ -199,6 +214,13 @@
                             <label for="editCategoryName" class="form-label">Category Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editCategoryName" name="name" maxlength="50" required>
                             <div class="form-text">Maximum 50 characters</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCategorySkuPrefix" class="form-label">SKU Prefix</label>
+                            <input type="text" class="form-control" id="editCategorySkuPrefix" name="sku_prefix" maxlength="10" readonly style="background-color: #e9ecef;">
+                            <div class="form-text text-warning">
+                                <i class="bi bi-exclamation-triangle"></i> SKU prefix cannot be changed after creation to maintain product SKU integrity.
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="editCategoryDescription" class="form-label">Description</label>
@@ -260,6 +282,7 @@
                     .then(response => response.json())
                     .then(category => {
                         document.getElementById('editCategoryName').value = category.name;
+                        document.getElementById('editCategorySkuPrefix').value = category.sku_prefix;
                         document.getElementById('editCategoryDescription').value = category.description || '';
                         document.getElementById('editCategoryForm').action = `/categories/${categoryId}`;
                         
@@ -279,6 +302,7 @@
                     .then(category => {
                         document.getElementById('viewCategoryId').textContent = category.id;
                         document.getElementById('viewCategoryName').textContent = category.name;
+                        document.getElementById('viewCategorySkuPrefix').textContent = category.sku_prefix;
                         document.getElementById('viewCategoryDescription').textContent = category.description || 'No description';
                         document.getElementById('viewCategoryCreatedAt').textContent = new Date(category.created_at).toLocaleString();
                         document.getElementById('viewCategoryUpdatedAt').textContent = new Date(category.updated_at).toLocaleString();

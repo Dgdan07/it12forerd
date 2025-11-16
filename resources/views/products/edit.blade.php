@@ -86,6 +86,16 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label">SKU</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   value="{{ $product->sku }}" 
+                                   readonly
+                                   style="background-color: #e9ecef;">
+                            <div class="form-text">SKU cannot be changed after product creation.</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="manufacturer_barcode" class="form-label">Manufacturer Barcode</label>
                             <input type="text" class="form-control" id="manufacturer_barcode" name="manufacturer_barcode" value="{{ old('manufacturer_barcode', $product->manufacturer_barcode) }}" maxlength="20" 
                                 placeholder="Scan or type the barcode number here..." inputmode="numeric" pattern="[0-9]{12,20}"

@@ -10,6 +10,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'sku',
         'name',
         'description',
         'category_id',
@@ -117,4 +118,43 @@ class Product extends Model
                         $q->where('name', 'like', '%' . $search . '%');
                     });
     }
+
+    public static function generateSku($categoryId, $suffix = null)
+    {
+        $category = Category::find($categoryId);
+        if (!$category) {
+            throw new \Exception('Category not found');
+        }
+
+        $prefix = $category->sku_prefix;
+        
+        // If suffix is provided, use it (for editing)
+        if ($suffix !== null) {
+            return $prefix . '-' . str_pad($suffix, 5, '0', STR_PAD_LEFT);
+        }
+
+        // Find the highest suffix for this prefix
+        $latestProduct = self::where('sku', 'like', $prefix . '-%')
+            ->orderBy('sku', 'desc')
+            ->first();
+
+        if ($latestProduct) {
+            // Extract the numeric part and increment
+            $lastSuffix = intval(substr($latestProduct->sku, strlen($prefix) + 1));
+            $nextSuffix = $lastSuffix + 1;
+        } else {
+            $nextSuffix = 1;
+        }
+
+        return $prefix . '-' . str_pad($nextSuffix, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Check if SKU is editable (only for new products before saving)
+     */
+    public function isSkuEditable()
+    {
+        return !$this->exists; // Only editable for new products
+    }
+    
 }

@@ -74,6 +74,24 @@
                             </select>
                         </div>
 
+                        <!-- SKU -->
+                        <div class="mb-3">
+                            <label for="sku_display" class="form-label">SKU <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="sku_prefix_display">-</span>
+                                <span class="input-group-text">-</span>
+                                <input type="text" class="form-control" id="sku_suffix" name="sku_suffix" maxlength="5"pattern="[0-9]*"
+                                       inputmode="numeric"required placeholder="00123">
+                                <button type="button" class="btn btn-outline-secondary" id="suggest_sku">
+                                    <i class="bi bi-magic"></i> Suggest
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Format: <strong><span id="sku_format_display">CAT-00123</span></strong>. 
+                                Prefix is auto-generated from category. Suffix must be 1-5 digits and unique per category.
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="manufacturer_barcode" class="form-label">Manufacturer Barcode</label>
                             <input type="text" class="form-control" id="manufacturer_barcode" name="manufacturer_barcode" value="{{ old('manufacturer_barcode') }}" maxlength="20" 
@@ -463,6 +481,125 @@
                 });
             }
         });
+    });
+
+    // SKU Generation Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category_id');
+        const skuPrefixDisplay = document.getElementById('sku_prefix_display');
+        const skuSuffixInput = document.getElementById('sku_suffix');
+        const skuFormatDisplay = document.getElementById('sku_format_display');
+        const suggestBtn = document.getElementById('suggest_sku');
+
+        // Restrict input to numbers only and max 5 digits
+        skuSuffixInput.addEventListener('input', function() {
+            // Remove any non-digit characters
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            // Limit to 5 digits
+            if (this.value.length > 5) {
+                this.value = this.value.slice(0, 5);
+            }
+            
+            // Remove leading zeros (but allow single zero)
+            if (this.value.length > 1) {
+                this.value = this.value.replace(/^0+/, '');
+            }
+            
+            updateSkuFormat();
+            saveSkuData();
+        });
+
+        // Prevent paste of non-numeric characters
+        skuSuffixInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const numbersOnly = pastedText.replace(/[^0-9]/g, '').slice(0, 5);
+            this.value = numbersOnly;
+            updateSkuFormat();
+            saveSkuData();
+        });
+
+        // Update SKU prefix when category changes
+        categorySelect.addEventListener('change', function() {
+            const categoryId = this.value;
+            if (categoryId) {
+                fetch(`/categories/${categoryId}`)
+                    .then(response => response.json())
+                    .then(category => {
+                        skuPrefixDisplay.textContent = category.sku_prefix;
+                        updateSkuFormat();
+                        suggestSku();
+                    });
+            } else {
+                skuPrefixDisplay.textContent = '-';
+                updateSkuFormat();
+            }
+        });
+
+        // Update SKU format display
+        function updateSkuFormat() {
+            const prefix = skuPrefixDisplay.textContent;
+            const suffix = skuSuffixInput.value ? skuSuffixInput.value.padStart(5, '0') : '00001';
+            skuFormatDisplay.textContent = `${prefix}-${suffix}`;
+        }
+
+        // Suggest next available SKU
+        function suggestSku() {
+            const categoryId = categorySelect.value;
+            if (!categoryId) {
+                alert('Please select a category first');
+                return;
+            }
+
+            fetch(`/products/suggest-sku/${categoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.suggested_suffix) {
+                        // Ensure the suggested suffix is max 5 digits
+                        let suffix = data.suggested_suffix.toString();
+                        if (suffix.length > 5) {
+                            suffix = suffix.slice(-5); // Take last 5 digits if too long
+                        }
+                        skuSuffixInput.value = suffix;
+                        updateSkuFormat();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error suggesting SKU:', error);
+                });
+        }
+
+        // Suggest button click
+        suggestBtn.addEventListener('click', suggestSku);
+
+        // Load initial state from saved form data
+        const saved = localStorage.getItem('productFormData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.category_id) {
+                // Trigger category change to load SKU prefix
+                setTimeout(() => {
+                    categorySelect.value = data.category_id;
+                    categorySelect.dispatchEvent(new Event('change'));
+                    
+                    // Set saved suffix if exists
+                    if (data.sku_suffix) {
+                        // Ensure saved suffix is only numbers and max 5 digits
+                        let suffix = data.sku_suffix.toString().replace(/[^0-9]/g, '').slice(0, 5);
+                        skuSuffixInput.value = suffix;
+                        updateSkuFormat();
+                    }
+                }, 100);
+            }
+        }
+
+        // Save SKU data to localStorage
+        function saveSkuData() {
+            const currentData = JSON.parse(localStorage.getItem('productFormData') || '{}');
+            currentData.sku_suffix = skuSuffixInput.value;
+            localStorage.setItem('productFormData', JSON.stringify(currentData));
+        }
     });
 </script>
 @endpush

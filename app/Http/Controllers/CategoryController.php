@@ -20,7 +20,8 @@ class CategoryController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%');
+                  ->orWhere('description', 'like', '%' . $search . '%')
+                  ->orWhere('sku_prefix', 'like', '%' . $search . '%');
             });
         }
 
@@ -45,6 +46,7 @@ class CategoryController extends Controller
             $request->validate([
                 'name' => 'required|string|max:50|unique:categories,name',
                 'description' => 'nullable|string|max:255',
+                'sku_prefix' => 'required|string|max:10|unique:categories,sku_prefix',
             ]);
 
             $capitalizedName = ucwords(strtolower($request->name));
@@ -52,6 +54,7 @@ class CategoryController extends Controller
             Category::create([
                 'name' => $capitalizedName,
                 'description' => $request->description,
+                'sku_prefix' => strtoupper($request->sku_prefix),
             ]);
     
 
