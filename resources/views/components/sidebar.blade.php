@@ -56,12 +56,18 @@
                     <i class="bi bi-chevron-down ms-auto chevron"></i> 
                 </a>
                 
-                <div class="collapse {{ request()->is('products*') || request()->is('categories*') || request()->is('suppliers*') ? 'show' : '' }}" id="collapseInventory">
+                <div class="collapse {{ request()->is('products*') || request()->is('product-prices*') || request()->is('categories*') || request()->is('suppliers*') ? 'show' : '' }}" id="collapseInventory">
                     <ul class="nav flex-column ps-3">
                         <li class="nav-item">
                             <a href="{{ route('products.index') }}" class="nav-link {{ request()->is('products*') ? 'active' : '' }}">
-                                <i class="bi bi-tag me-3"></i>
+                                <i class="bi bi-box-seam me-3"></i>
                                 <span>Product List</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('product-prices.index') }}" class="nav-link {{ request()->is('product-prices*') ? 'active' : '' }}">
+                                <i class="bi bi-cash-stack me-3"></i>
+                                <span>Product Prices</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -81,8 +87,14 @@
             </li>
             <li class="nav-item">
                 <a href="{{ route('stock-ins.index') }}" class="nav-link {{ request()->is('stock-ins*') ? 'active' : '' }}">
-                    <i class="bi bi-cart me-3"></i>
+                    <i class="bi bi-box-arrow-in-down me-3"></i>
                     <span>Stock In</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('stock-adjustments.index') }}" class="nav-link {{ request()->is('stock-adjustments*') ? 'active' : '' }}">
+                    <i class="bi bi-sliders me-3"></i>
+                    <span>Stock Adjustments</span>
                 </a>
             </li>
             <li class="nav-item">

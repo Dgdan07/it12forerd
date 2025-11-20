@@ -12,6 +12,7 @@ use App\Http\Controllers\UserController;
 
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\StockAdjustmentController;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -69,6 +70,9 @@ Route::middleware(['auth.simple'])->group(function () {
             return response()->json($products);
         });
 
+        Route::resource('stock-adjustments', StockAdjustmentController::class);
+        Route::get('stock-adjustments/{id}/show', [StockAdjustmentController::class, 'show'])->name('stock-adjustments.show');
+        
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
         Route::get('/sales/{id}', [SaleController::class, 'show'])->name('sales.show');
         Route::get('/sales/{id}/receipt', [SaleController::class, 'receipt'])->name('sales.receipt');
